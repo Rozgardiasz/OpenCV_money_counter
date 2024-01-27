@@ -2,40 +2,43 @@ import cv2
 import cvzone
 import numpy as np
 
+# video = cv2.VideoCapture(1)
+video = cv2.VideoCapture('testing_assets/otwor_v2.mp4')
+video.set(3, 640)
+
 # współrzędne kursora
 mouse_x, mouse_y = 0, 0
 
-# video = cv2.VideoCapture(1)
-video = cv2.VideoCapture('testing_assets/Taśmociąg_bez kartki.mp4')
-video.set(3, 640)
-
 frame_number = 0
 belt_speed = 0  # offset przesunięć współrzędnej x obiektów na taśmociągu pomiędzy klatkami
+fps = 10
 deviation_y = 3  # dopuszczalny odchył pomiędzy współrzędną y tego samego obiektu w różnych klatkach (możemy umieścić telefon krzywo i wtedy potencjalnie szły by lekko na ukos)
 detected_objects_per_frame = {}  # słownik składający się z numeru klatki i listy wykrytej w niej obiektów (samych monet)
 all_detected_objects = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
 
+
 # proporcje monet w stosunku do kwadracika dla skali
-scale_square_area = 0
+scale_area = 0
+
 # zlotowki -------------------------------------
-pln5_u_limit = 2.6
-pln5_l_limit = 2.25
+pln5_u_limit = 0
+pln5_l_limit = 0
 
-pln2_u_limit = 3
-pln2_l_limit = 2.65
+pln2_u_limit = 18.020
+pln2_l_limit = 17.786
 
-pln1_u_limit = 2.7
-pln1_l_limit = 2.55
+pln1_u_limit = 0
+pln1_l_limit = 0
 
 # grosze >10
-pln05_u_limit = 3.45
-pln05_l_limit = 3.2
+pln05_u_limit = 20.026
+pln05_l_limit = 19.790
 
-pln02_u_limit = 4.4
-pln02_l_limit = 4.2
+pln02_u_limit = 0
+pln02_l_limit = 0
 
-pln01_u_limit = 5.45
-pln01_l_limit = 5
+pln01_u_limit = 0
+pln01_l_limit = 0
 
 # grosze <10
 pln005_u_limit = 0
@@ -82,13 +85,13 @@ def search_for_pln(area):
     return 0
 
 
-
 def remove_same_objects(list1, list2):
     copy_list2 = []
     for object2 in list2:
         add_flag = True
         for object1 in list1:
-            if object1['center'][1] - deviation_y <= object2['center'][1] <= object1['center'][1] + deviation_y and object2['center'][0] > object1['center'][0] + belt_speed:
+            if object1['center'][1] - deviation_y <= object2['center'][1] <= object1['center'][1] + deviation_y and \
+                    object2['center'][0] > object1['center'][0] + belt_speed:
                 add_flag = False
                 break
 
@@ -109,21 +112,31 @@ def mouse_xy(event, x, y, flags, param):
     mouse_x, mouse_y = x, y
 
 
-# def empty(a):
-#     pass
-# cv2.namedWindow("Settings")
-# cv2.resizeWindow("Settings", 640, 240)
-# cv2.createTrackbar("Threshold1", "Settings", 219, 255, empty)
-# cv2.createTrackbar("Threshold2", "Settings", 233, 255, empty)
+def find_border(img_bin):
+    most_right_white = None
+    most_left_white = None
+    most_up_white = None
+    most_down_white = None
+
+    for i in range(len(img_bin)):
+        for j in range(len(img_bin[i])):
+            if img_bin[i][j] == 255:
+                if j < len(img_bin[i]) - 1 and img_bin[i][j + 1] == 0 and (
+                        most_right_white is None or j > most_right_white[1]):
+                    most_right_white = (i, j)
+                if j > 0 and img_bin[i][j - 1] == 0 and (most_left_white is None or j < most_left_white[1]):
+                    most_left_white = (i, j)
+                if i > 0 and img_bin[i - 1][j] == 0 and (most_up_white is None or i < most_up_white[0]):
+                    most_up_white = (i, j)
+                if i < len(img_bin) - 1 and img_bin[i + 1][j] == 0 and (
+                        most_down_white is None or i > most_down_white[0]):
+                    most_down_white = (i, j)
+
+    return most_right_white[0], most_down_white[1], most_left_white[0], most_up_white[1]
+
 
 def preprocessing(frame):
-    # # dla białego
-    # frame = cv2.convertScaleAbs(frame, 2, 5)
-    # dla ciemnego
-    frame = adjust_gamma(frame, 0.4)
     pre_image = cv2.GaussianBlur(frame, (5, 5), 3)
-    # pre_image = cv2.Canny(pre_image, cv2.getTrackbarPos("Threshold1", "Settings"),
-    #                       cv2.getTrackbarPos("Threshold2", "Settings"))
     pre_image = cv2.Canny(pre_image, 16, 255)
     kernel = np.ones((4, 4), np.uint8)
     pre_image = cv2.dilate(pre_image, kernel, iterations=1)
@@ -131,38 +144,55 @@ def preprocessing(frame):
     return pre_image
 
 
+first_frame_flag = True
+x1, y1, x2, y2 = 0, 0, 0, 0
+
 while True:
     success, frame = video.read()
     detected_objects_per_frame[frame_number] = []
 
-    pre_image = preprocessing(frame)
-    contours_image, countors = cvzone.findContours(frame, pre_image, minArea=20, sort=True)
+    if first_frame_flag == True:
+        tresh_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        retval, tresh_frame = cv2.threshold(tresh_frame, 90, 255, cv2.THRESH_BINARY)
+        x1, y1, x2, y2 = find_border(tresh_frame)
+        print(x1, y1, x2, y2)
+        scale_area = (x2-x1) * (y2-y1)
+        print(scale_area)
+        first_frame_flag = False
 
-    for c in countors:
+    frame = frame[x1:x2, y1:y2]
+    pre_frame = preprocessing(frame)
+
+    contours_image, countours = cvzone.findContours(frame, pre_frame, minArea=20, sort=True)
+
+    for c in countours:
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
         corner_amount = len(corners)
 
         varY, varX = c["center"]
-        pre_image[varX - 5:varX + 5, varY - 5:varY + 5] = 255
+        pre_frame[varX - 5:varX + 5, varY - 5:varY + 5] = 255
 
-        if len(corners) == 4:
-            scale_square_area = c['area']
+        if c['area'] != 0 and corner_amount == 8:
 
-        if c['area'] != 0 and corner_amount >= 8:
-            res = search_for_pln(scale_square_area / c['area'])
+
+
+            res = search_for_pln(scale_area / c['area'])
             if res != 0:
-                detected_objects_per_frame[frame_number].append(c) #dodanie monety do listy odpowiadającej aktualnej klatce
+                print(res)
+                detected_objects_per_frame[frame_number].append(
+                    c)  # dodanie monety do listy odpowiadającej aktualnej klatce
 
     if len(detected_objects_per_frame) > 2:  # usuwanie list z poprzednich klatek (do porównania potrzebne są tylko dwie)
         keys_to_remove = list(detected_objects_per_frame.keys())[:-2]
         for key in keys_to_remove:
             detected_objects_per_frame.pop(key)
 
-    if len(detected_objects_per_frame) > 1: #usuwanie powtórzonych elementów, a następnie dodawanie nowych do zbiorczej listy
+    if len(detected_objects_per_frame) > 1:  # usuwanie powtórzonych elementów, a następnie dodawanie nowych do zbiorczej listy
         if frame_number == 1:
             # print("1:",len(all_detected_objects))
             # print("2:",len(detected_objects_per_frame[1]))
-            detected_objects_per_frame[1] = remove_same_objects(detected_objects_per_frame[0], detected_objects_per_frame[1])
+            detected_objects_per_frame[1] = remove_same_objects(detected_objects_per_frame[0],
+                                                                detected_objects_per_frame[1])
             # print("3:",len(detected_objects_per_frame[1]))
             all_detected_objects.extend(detected_objects_per_frame[0])
             # print("4:", len(all_detected_objects))
@@ -170,7 +200,8 @@ while True:
         if frame_number == 2:
             # print("1:",len(all_detected_objects))
             # print("2:",len(detected_objects_per_frame[2]))
-            detected_objects_per_frame[2] = remove_same_objects(detected_objects_per_frame[1], detected_objects_per_frame[2])
+            detected_objects_per_frame[2] = remove_same_objects(detected_objects_per_frame[1],
+                                                                detected_objects_per_frame[2])
             # print("3:",len(detected_objects_per_frame[2]))
             all_detected_objects.extend(detected_objects_per_frame[1])
             # print("4:", len(all_detected_objects))
@@ -178,11 +209,26 @@ while True:
         if frame_number == 0:
             # print("1:",len(all_detected_objects))
             # print("2:",len(detected_objects_per_frame[0]))
-            detected_objects_per_frame[0] = remove_same_objects(detected_objects_per_frame[2], detected_objects_per_frame[0])
+            detected_objects_per_frame[0] = remove_same_objects(detected_objects_per_frame[2],
+                                                                detected_objects_per_frame[0])
             # print("3:",len(detected_objects_per_frame[0]))
             all_detected_objects.extend(detected_objects_per_frame[2])
             # print("4:", len(all_detected_objects))
+            # Wprowadź opóźnienie na podstawie liczby klatek na sekundę
 
+        delay = int(1000 / fps)
+
+        # Oczekuj na klawisz "Tab", aby przełączyć między 30 i 60 FPS
+        key = cv2.waitKeyEx(delay)
+        if key == 9:  # Kod klawisza Tab
+            if fps == 60:
+                fps = 10
+            else:
+                fps = 60
+            print("zmieniono fps na ",fps)
+        # Wciśnięcie klawisza "Esc" kończy pętlę
+        elif key == 27:
+            break
 
 
 
@@ -190,13 +236,12 @@ while True:
     if frame_number > 2:  # jest to tutaj po to żeby nie przekroczyć maksymalnej wartości
         frame_number = 0
 
-    Stacked = cvzone.stackImages([contours_image, pre_image], 2, 1)
+    Stacked = cvzone.stackImages([contours_image, pre_frame], 2, 1)
     cv2.imshow("Image", Stacked)
 
     # ustawienie aktualnych współrzędnych w tytule w celu lepszego debuggowania
     cv2.setMouseCallback("Image", mouse_xy)
     cv2.setWindowTitle("Image", f"({mouse_x}, {mouse_y})")
 
-    print(len(all_detected_objects))
+    # print(len(all_detected_objects))
     cv2.waitKey(1)
-
