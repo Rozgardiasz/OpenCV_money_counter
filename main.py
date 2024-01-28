@@ -103,27 +103,6 @@ def add_object(coin_to_add):
             detected_coins.append(coin_to_add)
 
 
-def remove_same_objects(list1, list2):
-    copy_list2 = []
-    for object2 in list2:
-        add_flag = True
-        for object1 in list1:
-            if object1['center'][1] - deviation_y <= object2['center'][1] <= object1['center'][1] + deviation_y and \
-                    object2['center'][0] > object1['center'][0] + belt_speed:
-                add_flag = False
-                break
-
-        if add_flag:
-            copy_list2.append(object2)
-    return copy_list2
-
-
-def adjust_gamma(image, gamma=1.0):
-    inv_gamma = 1.0 / gamma
-    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-    return cv2.LUT(image, table)
-
-
 def find_border(img_bin):
     most_right_white = None
     most_left_white = None
@@ -146,7 +125,6 @@ def find_border(img_bin):
 
     return most_right_white[0], most_down_white[1], most_left_white[0], most_up_white[1]
 
-
 def find_black_pixels(img_bin):
     most_up_black = None
     most_down_black = None
@@ -167,7 +145,6 @@ def find_black_pixels(img_bin):
 
     return most_left_black[0], most_up_black[1], most_right_black[0], most_down_black[1]
 
-
 def preprocessing(frame_to_pre):
     pre_image = cv2.GaussianBlur(frame_to_pre, (5, 5), 3)
     pre_image = cv2.Canny(pre_image, 16, 255)
@@ -176,9 +153,10 @@ def preprocessing(frame_to_pre):
     pre_image = cv2.morphologyEx(pre_image, cv2.MORPH_CLOSE, kernel)
     return pre_image
 
-
 while True:
     success, frame = video.read()
+    if not success:
+        break
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
@@ -212,18 +190,18 @@ while True:
 
                 add_object(coin)
 
-        delay = int(1000 / fps)
+    delay = int(1000 / fps)
 
-        #  Wciśnięcie klawisza "Tab", przełącza między default a slowed fps
-        key = cv2.waitKeyEx(delay)
-        if key == 9:  # Kod klawisza Tab
-            if fps == default_fps:
-                fps = slowed_fps
-            else:
-                fps = default_fps
-        # Wciśnięcie klawisza "Esc" kończy pętlę
-        elif key == 27:
-            break
+    #  Wciśnięcie klawisza "Tab", przełącza między default a slowed fps
+    key = cv2.waitKeyEx(delay)
+    if key == 9:  # Kod klawisza Tab
+        if fps == default_fps:
+            fps = slowed_fps
+        else:
+            fps = default_fps
+    # Wciśnięcie klawisza "Esc" kończy pętlę
+    elif key == 27:
+        break
 
     fps_counter = np.zeros((100, 100, 3), np.uint8)
     coin_counter = np.zeros((100, 300, 3), np.uint8)
