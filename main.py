@@ -172,7 +172,20 @@ while True:
     frame = frame[x1:x2, y1:y2]
     pre_frame = preprocessing(frame)
 
-    contours_image, contour = cvzone.findContours(frame, pre_frame, minArea=100, sort=True)
+
+# initial contour processing
+    contour, _ = cv2.findContours(pre_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    conFound = []
+    for cnt in contour:
+        area = cv2.contourArea(cnt)
+        if area > 100:
+            peri = cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+            x, y, w, h = cv2.boundingRect(approx)
+            cx, cy = x + (w // 2), y + (h // 2)
+            conFound.append({"cnt": cnt, "area": area,  "center": [cx, cy]})
+
+    contour = conFound
 
     for c in contour:
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
@@ -181,7 +194,7 @@ while True:
         varY, varX = c["center"]
         pre_frame[varX - 5:varX + 5, varY - 5:varY + 5] = 255
 
-        if c['area'] != 0 and corner_amount == 8:
+        if corner_amount == 8:
 
             res = search_for_pln(scale_area / c['area'])
             if res != 0:
