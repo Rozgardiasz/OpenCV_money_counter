@@ -116,6 +116,19 @@ def preprocessing(frame_to_pre):
     pre_image = cv2.morphologyEx(pre_image, cv2.MORPH_CLOSE, kernel)
     return pre_image
 
+def preprocessContours(frame):
+    contour, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    conFound = []
+    for cnt in contour:
+        area = cv2.contourArea(cnt)
+        if area > 100:
+            peri = cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+            x, y, w, h = cv2.boundingRect(approx)
+            cx, cy = x + (w // 2), y + (h // 2)
+            conFound.append({"cnt": cnt, "area": area,  "center": [cx, cy]})
+    return conFound
+
 
 while True:
     success, frame = video.read()
@@ -138,20 +151,8 @@ while True:
 
 
 # initial contour processing
-    contour, _ = cv2.findContours(pre_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    conFound = []
-    for cnt in contour:
-        area = cv2.contourArea(cnt)
-        if area > 100:
-            peri = cv2.arcLength(cnt, True)
-            approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-            x, y, w, h = cv2.boundingRect(approx)
-            cx, cy = x + (w // 2), y + (h // 2)
-            conFound.append({"cnt": cnt, "area": area,  "center": [cx, cy]})
 
-    contour = conFound
-
-    for c in contour:
+    for c in preprocessContours(pre_frame):
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
         corner_amount = len(corners)
 
