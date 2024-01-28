@@ -2,11 +2,15 @@ import cv2
 import cvzone
 import numpy as np
 
-# video = cv2.VideoCapture(1)
 video = cv2.VideoCapture('testing_assets/test_video1.mp4')
 video.set(3, 640)
 
+default_fps = 60
+slowed_fps = 10
+
 first_frame_flag = True
+x1, y1, x2, y2 = 0, 0, 0, 0
+
 
 
 belt_speed = 1  # offset przesunięć współrzędnej x obiektów na taśmociągu pomiędzy klatkami
@@ -175,12 +179,10 @@ def preprocessing(frame_to_pre):
 
 while True:
     success, frame = video.read()
-    x1, y1, x2, y2 = 0, 0, 0, 0
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
 
-        # cv2.imshow("a", tresh_frame)
         # x1, y1, x2, y2 = find_black_pixels(tresh_frame)
         # print(x1, y1, x2, y2)
         x1, y1, x2, y2 = find_border(binary_frame)
@@ -212,13 +214,13 @@ while True:
 
         delay = int(1000 / fps)
 
-        #  Wciśnięcie klawisza "Tab", przełącza między 30 i 60 FPS
+        #  Wciśnięcie klawisza "Tab", przełącza między default a slowed fps
         key = cv2.waitKeyEx(delay)
         if key == 9:  # Kod klawisza Tab
-            if fps == 60:
-                fps = 10
+            if fps == default_fps:
+                fps = slowed_fps
             else:
-                fps = 60
+                fps = default_fps
         # Wciśnięcie klawisza "Esc" kończy pętlę
         elif key == 27:
             break
