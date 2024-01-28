@@ -2,56 +2,17 @@ import cv2
 import cvzone
 import numpy as np
 
+from constants import *
+
 video = cv2.VideoCapture('testing_assets/test_video1.mp4')
 video.set(3, 640)
 
-default_fps = 60
-slowed_fps = 10
-
 first_frame_flag = True
 x1, y1, x2, y2 = 0, 0, 0, 0
+fps = default_fps
+scale_area = 0 # proporcje monet w stosunku do kwadracika dla skali
 
-
-
-belt_speed = 1  # offset przesunięć współrzędnej x obiektów na taśmociągu pomiędzy klatkami
-fps = 10
-deviation_y = 5  # dopuszczalny odchył pomiędzy współrzędną y tego samego obiektu w różnych klatkach (możemy umieścić telefon krzywo i wtedy potencjalnie szły by lekko na ukos)
 detected_coins = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
-
-# proporcje monet w stosunku do kwadracika dla skali
-scale_area = 0
-
-# zlotowki -------------------------------------
-pln5_u_limit = 0
-pln5_l_limit = 0
-
-pln2_u_limit = 18.020
-pln2_l_limit = 17.786
-
-pln1_u_limit = 0
-pln1_l_limit = 0
-
-# grosze >10
-pln05_u_limit = 20.026
-pln05_l_limit = 19.790
-
-pln02_u_limit = 0
-pln02_l_limit = 0
-
-pln01_u_limit = 0
-pln01_l_limit = 0
-
-# grosze <10
-pln005_u_limit = 0
-pln005_l_limit = 0
-
-pln002_u_limit = 0
-pln002_l_limit = 0
-
-pln001_u_limit = 0
-pln001_l_limit = 0
-
-
 # -----------------------------------------------
 
 
@@ -125,6 +86,7 @@ def find_border(img_bin):
 
     return most_right_white[0], most_down_white[1], most_left_white[0], most_up_white[1]
 
+
 def find_black_pixels(img_bin):
     most_up_black = None
     most_down_black = None
@@ -145,6 +107,7 @@ def find_black_pixels(img_bin):
 
     return most_left_black[0], most_up_black[1], most_right_black[0], most_down_black[1]
 
+
 def preprocessing(frame_to_pre):
     pre_image = cv2.GaussianBlur(frame_to_pre, (5, 5), 3)
     pre_image = cv2.Canny(pre_image, 16, 255)
@@ -152,6 +115,7 @@ def preprocessing(frame_to_pre):
     pre_image = cv2.dilate(pre_image, kernel, iterations=1)
     pre_image = cv2.morphologyEx(pre_image, cv2.MORPH_CLOSE, kernel)
     return pre_image
+
 
 while True:
     success, frame = video.read()
@@ -207,13 +171,13 @@ while True:
 
     #  Wciśnięcie klawisza "Tab", przełącza między default a slowed fps
     key = cv2.waitKeyEx(delay)
-    if key == 9:  # Kod klawisza Tab
+    if key == VK_TAB:
         if fps == default_fps:
             fps = slowed_fps
         else:
             fps = default_fps
     # Wciśnięcie klawisza "Esc" kończy pętlę
-    elif key == 27:
+    elif key == VK_ESC:
         break
 
     fps_counter = np.zeros((100, 100, 3), np.uint8)
