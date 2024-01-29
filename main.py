@@ -1,18 +1,23 @@
+import sys
+
 import cv2
 import cvzone
 import numpy as np
 
+import gui
 from constants import *
 
 video = cv2.VideoCapture('testing_assets/test_video1.mp4')
 video.set(3, 640)
 
 first_frame_flag = True
-x1, y1, x2, y2 = 0, 0, 0, 0
 fps = default_fps
-scale_area = 0 # proporcje monet w stosunku do kwadracika dla skali
+x1, y1, x2, y2 = 0, 0, 0, 0
+scale_area = 0  # proporcje monet w stosunku do kwadracika dla skali
 
 detected_coins = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
+
+
 # -----------------------------------------------
 
 
@@ -116,6 +121,7 @@ def preprocessing(frame_to_pre):
     pre_image = cv2.morphologyEx(pre_image, cv2.MORPH_CLOSE, kernel)
     return pre_image
 
+
 def preprocessContours(frame):
     contour, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     conFound = []
@@ -126,8 +132,82 @@ def preprocessContours(frame):
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
             x, y, w, h = cv2.boundingRect(approx)
             cx, cy = x + (w // 2), y + (h // 2)
-            conFound.append({"cnt": cnt, "area": area,  "center": [cx, cy]})
+            conFound.append({"cnt": cnt, "area": area, "center": [cx, cy]})
     return conFound
+
+
+import cv2
+
+from constants import *
+import tkinter as tk
+from PIL import Image, ImageTk
+
+
+def change_fps():
+    global fps
+    if fps == default_fps:
+        fps = slowed_fps
+    else:
+        fps = default_fps
+
+
+
+
+root = tk.Tk()
+root.title("Real-time Object Detection")
+def on_close():
+    # Tutaj umieść kod, który ma zostać wykonany przed zamknięciem okna
+    print("Zamykanie okna...")
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_close)
+
+
+
+# Utwórz Canvas do umieszczenia dwóch obrazków obok siebie
+canvas = tk.Canvas(root, width=600, height=300)
+canvas.pack(padx=10, pady=10)
+
+# Utwórz etykiety dla klatek i pre-klatek
+label_fps = tk.Label(root, text="FPS: ")
+label_fps.pack(pady=10)
+label_first_coins = tk.Label(root, text="First Coins: ")
+label_first_coins.pack(pady=10)
+
+# Dodaj przycisk Change FPS do zmiany prędkości fps
+change_fps_button = tk.Button(root, text="Change FPS", command=change_fps)
+change_fps_button.pack(pady=10)
+
+# Dodaj przycisk Quit do zamknięcia aplikacji
+quit_button = tk.Button(root, text="Quit", command=root.destroy)
+canvas.pack(padx=10, pady=10)
+
+
+def print_gui(frame, pre_frame, detected_coins):
+    # Konwertuj klatkę do formatu obsługiwanego przez tkinter
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img_frame = Image.fromarray(frame_rgb)
+    img_frame = ImageTk.PhotoImage(image=img_frame)
+
+    # Konwertuj pre-klatkę do formatu obsługiwanego przez tkinter
+    pre_frame_rgb = cv2.cvtColor(pre_frame, cv2.COLOR_BGR2RGB)
+    img_preframe = Image.fromarray(pre_frame_rgb)
+    img_preframe = ImageTk.PhotoImage(image=img_preframe)
+
+    # Utwórz obrazki na Canvasie
+    canvas.create_image(0, 0, anchor=tk.NW, image=img_frame)
+    canvas.create_image(img_frame.width() + 10, 0, anchor=tk.NW, image=img_preframe)
+
+    # Uaktualnij wartość fps
+    label_fps.config(text=f"FPS: {fps}")
+
+    # Uaktualnij wartość pierwszych monet
+    first_coins_values = [coin[0] for coin in detected_coins]
+    label_first_coins.config(text=f"First Coins: {first_coins_values}")
+
+    # Uaktualnij GUI
+    root.update_idletasks()
+    root.update()
 
 
 while True:
@@ -149,8 +229,7 @@ while True:
     frame = frame[x1:x2, y1:y2]
     pre_frame = preprocessing(frame)
 
-
-# initial contour processing
+    # initial contour processing
 
     for c in preprocessContours(pre_frame):
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
@@ -169,25 +248,8 @@ while True:
                 add_object(coin)
 
     delay = int(1000 / fps)
+    print_gui(frame, pre_frame, detected_coins)
 
-    #  Wciśnięcie klawisza "Tab", przełącza między default a slowed fps
-    key = cv2.waitKeyEx(delay)
-    if key == VK_TAB:
-        if fps == default_fps:
-            fps = slowed_fps
-        else:
-            fps = default_fps
-    # Wciśnięcie klawisza "Esc" kończy pętlę
-    elif key == VK_ESC:
-        break
+    cv2.waitKey(delay)
 
-    fps_counter = np.zeros((100, 100, 3), np.uint8)
-    coin_counter = np.zeros((100, 300, 3), np.uint8)
-    cvzone.putTextRect(fps_counter, f'FPS: {fps}', (0, 15), scale=0.8, thickness=1, colorB=0)
-
-    coins = [obj[0] for obj in detected_coins]
-    cvzone.putTextRect(coin_counter, f'coins: {coins}', (0, 15), scale=1, thickness=1, colorB=0)
-
-    Stacked = cvzone.stackImages([frame, pre_frame, fps_counter, coin_counter], 2, 1)
-    cv2.imshow("Image", Stacked)
-    cv2.waitKey(1)
+root.destroy()
