@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+
+import gui_module
 from constants import *
 
-video = cv2.VideoCapture('testing_assets/video_teraz.mp4')
-# video = cv2.VideoCapture(2)
+gui = gui_module.GUI()
+video = cv2.VideoCapture('testing_assets/video3.mp4')
 
 video.set(3, 640)
 first_frame_flag = True
@@ -12,9 +14,6 @@ fps = default_fps
 scale_area = 0  # proporcje monet w stosunku do kwadracika dla skali
 
 detected_coins = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
-
-
-# -----------------------------------------------
 
 
 def search_for_pln(area):
@@ -64,29 +63,6 @@ def add_object(coin_to_add):
             detected_coins.append(coin_to_add)
 
 
-def find_border(img_bin):
-    most_right_white = None
-    most_left_white = None
-    most_up_white = None
-    most_down_white = None
-
-    for i in range(len(img_bin)):
-        for j in range(len(img_bin[i])):
-            if img_bin[i][j] == 255:
-                if j < len(img_bin[i]) - 1 and img_bin[i][j + 1] == 0 and (
-                        most_right_white is None or j > most_right_white[1]):
-                    most_right_white = (i, j)
-                if j > 0 and img_bin[i][j - 1] == 0 and (most_left_white is None or j < most_left_white[1]):
-                    most_left_white = (i, j)
-                if i > 0 and img_bin[i - 1][j] == 0 and (most_up_white is None or i < most_up_white[0]):
-                    most_up_white = (i, j)
-                if i < len(img_bin) - 1 and img_bin[i + 1][j] == 0 and (
-                        most_down_white is None or i > most_down_white[0]):
-                    most_down_white = (i, j)
-
-    return most_right_white[0], most_down_white[1], most_left_white[0], most_up_white[1]
-
-
 def find_black_pixels(img_bin):
     most_up_black = None
     most_down_black = None
@@ -97,16 +73,12 @@ def find_black_pixels(img_bin):
         for j in range(len(img_bin[i])):
             if img_bin[i][j] == 0:  # Sprawdzanie czarnego piksela
                 if most_up_black is None or i < most_up_black[1]:
-                    print('working1')
                     most_up_black = (i, j)
                 if most_down_black is None or i > most_down_black[1]:
-                    print('working2')
                     most_down_black = (i, j)
                 if most_left_black is None or j < most_left_black[0]:
-                    print('working3')
                     most_left_black = (i, j)
                 if most_right_black is None or j > most_right_black[0]:
-                    print('working4')
                     most_right_black = (i, j)
 
     return most_left_black[0], most_up_black[1], most_right_black[0], most_down_black[1]
@@ -135,86 +107,13 @@ def preprocessContours(frame):
     return conFound
 
 
-import cv2
-
-from constants import *
-import tkinter as tk
-from PIL import Image, ImageTk
-
-
-def change_fps():
-    global fps
-    if fps == default_fps:
-        fps = slowed_fps
-    else:
-        fps = default_fps
-
-
-root = tk.Tk()
-root.title("Real-time Object Detection")
-
-
-def on_close():
-    # Tutaj umieść kod, który ma zostać wykonany przed zamknięciem okna
-    print("Zamykanie okna...")
-    root.destroy()
-
-
-root.protocol("WM_DELETE_WINDOW", on_close)
-
-# Utwórz Canvas do umieszczenia dwóch obrazków obok siebie
-canvas = tk.Canvas(root, width=600, height=300)
-canvas.pack(padx=10, pady=10)
-
-# Utwórz etykiety dla klatek i pre-klatek
-label_fps = tk.Label(root, text="FPS: ")
-label_fps.pack(pady=10)
-label_first_coins = tk.Label(root, text="First Coins: ")
-label_first_coins.pack(pady=10)
-
-# Dodaj przycisk Change FPS do zmiany prędkości fps
-change_fps_button = tk.Button(root, text="Change FPS", command=change_fps)
-change_fps_button.pack(pady=10)
-
-# Dodaj przycisk Quit do zamknięcia aplikacji
-quit_button = tk.Button(root, text="Quit", command=root.destroy)
-canvas.pack(padx=10, pady=10)
-
-
-def print_gui(frame, pre_frame, detected_coins):
-    # Konwertuj klatkę do formatu obsługiwanego przez tkinter
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    img_frame = Image.fromarray(frame_rgb)
-    img_frame = ImageTk.PhotoImage(image=img_frame)
-
-    # Konwertuj pre-klatkę do formatu obsługiwanego przez tkinter
-    pre_frame_rgb = cv2.cvtColor(pre_frame, cv2.COLOR_BGR2RGB)
-    img_preframe = Image.fromarray(pre_frame_rgb)
-    img_preframe = ImageTk.PhotoImage(image=img_preframe)
-
-    # Utwórz obrazki na Canvasie
-    canvas.create_image(0, 0, anchor=tk.NW, image=img_frame)
-    canvas.create_image(img_frame.width() + 10, 0, anchor=tk.NW, image=img_preframe)
-
-    # Uaktualnij wartość fps
-    label_fps.config(text=f"FPS: {fps}")
-
-    # Uaktualnij wartość pierwszych monet
-    first_coins_values = [coin[0] for coin in detected_coins]
-    label_first_coins.config(text=f"First Coins: {first_coins_values}")
-
-    # Uaktualnij GUI
-    root.update_idletasks()
-    root.update()
-
-
 while True:
     success, frame = video.read()
     if not success:
         break
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        retval, binary_frame = cv2.threshold(binary_frame, 80, 255, cv2.THRESH_BINARY)
+        retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
         cv2.imshow("a", binary_frame)
 
         x1, y1, x2, y2 = find_black_pixels(binary_frame)
@@ -228,7 +127,6 @@ while True:
     pre_frame = preprocessing(frame)
 
     # initial contour processing
-
     for c in preprocessContours(pre_frame):
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
         corner_amount = len(corners)
@@ -239,16 +137,13 @@ while True:
         if corner_amount == 8:
 
             res = search_for_pln(scale_area / c['area'])
-            # print(scale_area / c['area'],"--------------" , res)
             if res != 0:
-                # print(res, c['center'])
                 coin = [res, c['center'][0], c['center'][1]]
 
                 add_object(coin)
 
-    delay = int(1000 / fps)
-    print_gui(frame, pre_frame, detected_coins)
-
+    delay = int(1000 / gui.fps)
+    gui.update_gui(frame, pre_frame, detected_coins)
     cv2.waitKey(delay)
 
-root.destroy()
+gui.root.destroy()
