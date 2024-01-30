@@ -1,5 +1,5 @@
-default_fps = 60
-slowed_fps = 10
+default_fps = 60  # domyślna wartość fps
+slowed_fps = 10  # wartość fps po zwolnieniu
 belt_speed = 1  # offset przesunięć współrzędnej x obiektów na taśmociągu pomiędzy klatkami
 deviation_y = 7  # dopuszczalny odchył pomiędzy współrzędną y tego samego obiektu w różnych klatkach (możemy umieścić telefon krzywo i wtedy potencjalnie szły by lekko na ukos)
 
@@ -33,5 +33,3 @@ pln002_l_limit = 0
 pln001_u_limit = 37.09
 pln001_l_limit = 36.72
 
-VK_TAB = 9
-VK_ESC = 27

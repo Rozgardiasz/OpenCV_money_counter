@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-
 import gui_module
 from constants import *
 
@@ -47,6 +46,7 @@ def search_for_pln(area):
     return 0
 
 
+# Funkcja dodająca monety do listy, sprawdzając duplikaty i kierunek ruchu taśmociągu
 def add_object(coin_to_add):
     if len(detected_coins) == 0:
         print(coin_to_add)
@@ -63,6 +63,7 @@ def add_object(coin_to_add):
             detected_coins.append(coin_to_add)
 
 
+# Funkcja znajdująca współrzędne najbardziej oddalonych czarnych pikseli w pierwszej klatce
 def find_black_pixels(img_bin):
     most_up_black = None
     most_down_black = None
@@ -71,7 +72,7 @@ def find_black_pixels(img_bin):
 
     for i in range(len(img_bin)):
         for j in range(len(img_bin[i])):
-            if img_bin[i][j] == 0:  # Sprawdzanie czarnego piksela
+            if img_bin[i][j] == 0:  # poszukiwanie czterech najbardziej oddalonych w każdym kierunku czarnych pikseli
                 if most_up_black is None or i < most_up_black[1]:
                     most_up_black = (i, j)
                 if most_down_black is None or i > most_down_black[1]:
@@ -84,7 +85,9 @@ def find_black_pixels(img_bin):
     return most_left_black[0], most_up_black[1], most_right_black[0], most_down_black[1]
 
 
+# Funkcja przetwarzająca klatkę przed detekcją konturów
 def preprocessing(frame_to_pre):
+    # Wygładza klatkę, aplikuje detekcję krawędzi, wykonuje dylatację i morfologiczne zamknięcie
     pre_image = cv2.GaussianBlur(frame_to_pre, (5, 5), 3)
     pre_image = cv2.Canny(pre_image, 16, 255)
     kernel = np.ones((4, 4), np.uint8)
@@ -93,8 +96,11 @@ def preprocessing(frame_to_pre):
     return pre_image
 
 
-def preprocessContours(frame):
-    contour, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+# Funkcja identyfikująca kontury i ich cechy
+def preprocess_contours(frame_to_con):
+    # Znajduje kontury w przetworzonej klatce, odrzuca małe kontury
+    # Zwraca listę słowników zawierających informacje o konturach
+    contour, _ = cv2.findContours(frame_to_con, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     conFound = []
     for cnt in contour:
         area = cv2.contourArea(cnt)
@@ -114,7 +120,6 @@ while True:
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
-        cv2.imshow("a", binary_frame)
 
         x1, y1, x2, y2 = find_black_pixels(binary_frame)
         print(x1, y1, x2, y2)
@@ -126,8 +131,7 @@ while True:
     frame = frame[x1:x2, y1:y2]
     pre_frame = preprocessing(frame)
 
-    # initial contour processing
-    for c in preprocessContours(pre_frame):
+    for c in preprocess_contours(pre_frame):
         corners = cv2.approxPolyDP(c['cnt'], 0.02 * cv2.arcLength(c['cnt'], True), True)
         corner_amount = len(corners)
 
