@@ -1,18 +1,14 @@
-import sys
-
 import cv2
-import cvzone
 import numpy as np
-
-import gui
 from constants import *
 
-video = cv2.VideoCapture('testing_assets/test_video1.mp4')
-video.set(3, 640)
+video = cv2.VideoCapture('testing_assets/video_teraz.mp4')
+# video = cv2.VideoCapture(2)
 
+video.set(3, 640)
 first_frame_flag = True
-fps = default_fps
 x1, y1, x2, y2 = 0, 0, 0, 0
+fps = default_fps
 scale_area = 0  # proporcje monet w stosunku do kwadracika dla skali
 
 detected_coins = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
@@ -59,9 +55,8 @@ def add_object(coin_to_add):
     else:
         add_flag = True
         for current_coin in detected_coins:
-            if current_coin[0] == coin_to_add[0] and \
-                    current_coin[2] - deviation_y <= coin_to_add[2] <= current_coin[2] + deviation_y \
-                    and coin_to_add[1] >= current_coin[1] + belt_speed:
+            if current_coin[2] - deviation_y <= coin_to_add[2] <= current_coin[2] + deviation_y \
+                    and coin_to_add[1] >= current_coin[1] + belt_speed and current_coin[0] == coin_to_add[0]:
                 add_flag = False
                 break
         if add_flag:
@@ -102,12 +97,16 @@ def find_black_pixels(img_bin):
         for j in range(len(img_bin[i])):
             if img_bin[i][j] == 0:  # Sprawdzanie czarnego piksela
                 if most_up_black is None or i < most_up_black[1]:
+                    print('working1')
                     most_up_black = (i, j)
                 if most_down_black is None or i > most_down_black[1]:
+                    print('working2')
                     most_down_black = (i, j)
                 if most_left_black is None or j < most_left_black[0]:
+                    print('working3')
                     most_left_black = (i, j)
                 if most_right_black is None or j > most_right_black[0]:
+                    print('working4')
                     most_right_black = (i, j)
 
     return most_left_black[0], most_up_black[1], most_right_black[0], most_down_black[1]
@@ -151,18 +150,17 @@ def change_fps():
         fps = default_fps
 
 
-
-
 root = tk.Tk()
 root.title("Real-time Object Detection")
+
+
 def on_close():
     # Tutaj umieść kod, który ma zostać wykonany przed zamknięciem okna
     print("Zamykanie okna...")
     root.destroy()
 
+
 root.protocol("WM_DELETE_WINDOW", on_close)
-
-
 
 # Utwórz Canvas do umieszczenia dwóch obrazków obok siebie
 canvas = tk.Canvas(root, width=600, height=300)
@@ -216,12 +214,12 @@ while True:
         break
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
+        retval, binary_frame = cv2.threshold(binary_frame, 80, 255, cv2.THRESH_BINARY)
+        cv2.imshow("a", binary_frame)
 
-        # x1, y1, x2, y2 = find_black_pixels(tresh_frame)
-        # print(x1, y1, x2, y2)
-        x1, y1, x2, y2 = find_border(binary_frame)
+        x1, y1, x2, y2 = find_black_pixels(binary_frame)
         print(x1, y1, x2, y2)
+
         scale_area = (x2 - x1) * (y2 - y1)
         print(scale_area)
         first_frame_flag = False
@@ -241,6 +239,7 @@ while True:
         if corner_amount == 8:
 
             res = search_for_pln(scale_area / c['area'])
+            # print(scale_area / c['area'],"--------------" , res)
             if res != 0:
                 # print(res, c['center'])
                 coin = [res, c['center'][0], c['center'][1]]
