@@ -4,13 +4,13 @@ import gui_module
 from constants import *
 
 gui = gui_module.GUI()
-video = cv2.VideoCapture('testing_assets/video3.mp4')
+video = cv2.VideoCapture('testing_assets/video1.mp4')
 
 video.set(3, 640)
 first_frame_flag = True
 x1, y1, x2, y2 = 0, 0, 0, 0
 fps = default_fps
-scale_area = 0  # proporcje monet w stosunku do kwadracika dla skali
+scale_area = 0  # proporcje monet w stosunku do oszaru zainteresowania
 
 detected_coins = []  # lista w której zapisane są wszystkie zczytane przez taśmociąg monety bez powórzeń
 
@@ -46,7 +46,7 @@ def search_for_pln(area):
     return 0
 
 
-# Funkcja dodająca monety do listy, sprawdzając duplikaty i kierunek ruchu taśmociągu
+# Funkcja dodająca monety do listy i sprawdzając duplikaty
 def add_object(coin_to_add):
     if len(detected_coins) == 0:
         print(coin_to_add)
@@ -89,7 +89,7 @@ def find_black_pixels(img_bin):
 def preprocessing(frame_to_pre):
     # Wygładza klatkę, aplikuje detekcję krawędzi, wykonuje dylatację i morfologiczne zamknięcie
     pre_image = cv2.GaussianBlur(frame_to_pre, (5, 5), 3)
-    pre_image = cv2.Canny(pre_image, 16, 255)
+    pre_image = cv2.Canny(pre_image, threshold_canny, 255)
     kernel = np.ones((4, 4), np.uint8)
     pre_image = cv2.dilate(pre_image, kernel, iterations=1)
     pre_image = cv2.morphologyEx(pre_image, cv2.MORPH_CLOSE, kernel)
@@ -119,7 +119,7 @@ while True:
         break
     if first_frame_flag:
         binary_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        retval, binary_frame = cv2.threshold(binary_frame, 90, 255, cv2.THRESH_BINARY)
+        retval, binary_frame = cv2.threshold(binary_frame, threshold_value, 255, cv2.THRESH_BINARY)
 
         x1, y1, x2, y2 = find_black_pixels(binary_frame)
         print(x1, y1, x2, y2)
@@ -141,7 +141,9 @@ while True:
         if corner_amount == 8:
 
             res = search_for_pln(scale_area / c['area'])
+
             if res != 0:
+                print(scale_area / c['area'])
                 coin = [res, c['center'][0], c['center'][1]]
 
                 add_object(coin)
