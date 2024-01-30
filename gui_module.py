@@ -7,7 +7,6 @@ from constants import *
 
 class GUI:
     def __init__(self):
-        # Inicjalizuje interfejs użytkownika
         self.fps = default_fps
 
         self.root = tk.Tk()
@@ -21,9 +20,9 @@ class GUI:
         self.label_fps = tk.Label(self.root, text="FPS: ")
         self.label_fps.pack(pady=10)
 
-        # Etykieta dla wyświetlania informacji o pierwszych monetach
-        self.label_first_coins = tk.Label(self.root, text="First Coins: ")
-        self.label_first_coins.pack(pady=10)
+        # Etykieta dla wyświetlania informacji o znalezionych monetach
+        self.label_coins = tk.Label(self.root, text="Coins: ")
+        self.label_coins.pack(pady=10)
 
         # Przycisk do zmiany prędkości odtwarzania wideo
         self.change_fps_button = tk.Button(self.root, text="Change FPS", command=self.change_fps)
@@ -34,7 +33,7 @@ class GUI:
         self.quit_button.pack(pady=10)
 
     def change_fps(self):
-        # Zmienia prędkość odtwarzania wideo na podstawie aktualnej wartości
+        # Zmienia prędkość odtwarzania wideo pomiędzy default a slowed
         if self.fps == default_fps:
             self.fps = slowed_fps
         else:
@@ -54,10 +53,10 @@ class GUI:
         self.canvas.create_image(0, 0, anchor=tk.NW, image=img_frame)
         self.canvas.create_image(img_frame.width() + 10, 0, anchor=tk.NW, image=img_preframe)
 
-        # Wyświetla informacje o prędkości odtwarzania i pierwszych monetach
-        first_coins_values = [coin[0] for coin in detected_coins]
+        # Wyświetla informacje o prędkości odtwarzania i znalezionych monetach
+        coins_values = [coin[0] for coin in detected_coins]
         self.label_fps.config(text=f"FPS: {self.fps}")
-        self.label_first_coins.config(text=f"First Coins: {first_coins_values}")
+        self.label_coins.config(text=f"Coins: {coins_values}")
 
         # Aktualizuje interfejs
         self.root.update_idletasks()
